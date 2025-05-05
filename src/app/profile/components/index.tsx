@@ -1,57 +1,108 @@
-"use client"
-import { useState } from "react"
-import { FiEdit, FiX } from "react-icons/fi"
+"use client";
+import { useEffect, useState } from "react";
+import { FiEdit, FiX, FiTrash2 } from "react-icons/fi";
+import { GameProps } from "@/utils/types/game";
 
-export function FavoriteCard(){
+export function FavoriteCard() {
+  const [input, setInput] = useState("");
+  const [showInput, setShowInput] = useState(false);
+  const [savedGame, setSavedGame] = useState("");
+  const [selectedGame, setSelectedGame] = useState('');
+  const [gameList, setGameList] = useState<GameProps[]>([]);
 
-    const [input, setInput] = useState("")
-    const [showInput, setShowInput] = useState(false)
-    const [gameName, setGameName] = useState("")
 
-    function handleButton(){
-        setShowInput(!showInput)
-
-        if(input !== ""){
-            setGameName(input)
-        }
-        setInput("")
+  useEffect(() => {
+    async function loadGames() {
+      try {
+        const response = await fetch(`https://sujeitoprogramador.com/next-api/?api=games`);
+        const text = await response.text(); 
+        const data = JSON.parse(text) 
+        setGameList(data);
+      } catch (error) {
+        console.error("Erro ao buscar jogos", error);
+      }
     }
-    return(
-        <div className="w-full bg-gray-900 p-4 h-44 text-white rounded-lg flex justify-between flex-col">
-           {showInput ? (
-            <div className="flex itams-center justify-center gap-3">
-                <input 
-                className="w-full rounded-md h-8 text-black px-2"
-                type="text"
-                value={input}
-                onChange={(event) => setInput(event.target.value)}
-                 />
-                 <button onClick={handleButton}>
-                    <FiX size={24} color="#fff" />
-                 </button>
-            </div>
-           ) : (
-            <h1>
-            <button className="self-start hover:scale-110 duration-200 transition-all">
-                <FiEdit size={24} color="#fff" />
-            </button>
-            </h1>
-           )}
-           {gameName && (
-            <div>
-                <span className="text-white">Jogo Favorito:</span>
-                <p className="font-bold text-white">{gameName}</p>
-            </div>
-           )}
-                {
-                    !gameName && (
-                        <p 
-                        className="font-bold text-white"
-                        onClick={handleButton} 
-                        >Adicionar jogo</p>
-                    )
-                }
-           
+      loadGames()
+    
+    const storedGame = localStorage.getItem("favoriteGame");
+    if (storedGame) {
+      setSavedGame(storedGame);
+    }
+  }, []);
+
+  function handleSave() {
+    if (selectedGame.trim() === "") return;
+
+    localStorage.setItem("favoriteGame", selectedGame);
+    setSavedGame(selectedGame);
+    setInput("");
+    setShowInput(false);
+  }
+
+  function handleCancel() {
+    setInput("");
+    setShowInput(false);
+  }
+
+  function handleDelete() {
+    localStorage.removeItem("favoriteGame");
+    setSavedGame("");
+    setInput("");
+    setShowInput(false);
+  }
+
+  return (
+    <div className="w-full bg-gray-500 p-4 text-white rounded-lg flex flex-col gap-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div>
+            <span className="text-sm">Jogo Favorito:</span>
+            <p className="font-bold">{savedGame || "Nenhum"}</p>
+          </div>
         </div>
-    )
+
+        <div>
+          {showInput ? (
+            <button onClick={() => setShowInput(false)} title="Cancelar">
+              <FiX size={20} />
+            </button>
+          ) : (
+            <button onClick={() => setShowInput(true)} title="Editar">
+              <FiEdit size={20} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {showInput && (
+        <>
+          <select className="text-black rounded p-1" value={selectedGame} onChange={(e) => setSelectedGame(e.target.value)}>
+            <option value="">Selecione um jogo</option>
+             {gameList.map((game) => (
+            <option key={game.id} value={game.title}>
+              {game.title}
+          </option>
+          ))}
+        </select>
+
+          <button
+            onClick={handleSave}
+            className="bg-green-600 hover:bg-green-700 px-3 py-1 rounded mt-2"
+          >
+            Salvar favorito
+          </button>
+        </>
+      )}
+
+      {savedGame && !showInput && (
+        <button
+          onClick={handleDelete}
+          className="flex items-center gap-2 text-sm text-bold"
+        >
+          <FiTrash2 />
+          Remover jogo favorito
+        </button>
+      )}
+    </div>
+  );
 }
